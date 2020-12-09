@@ -17,6 +17,7 @@
  *  along with GRUB.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <grub/charset.h>
 #include <grub/efi/efi.h>
 #include <grub/efi/console.h>
 #include <grub/efi/disk.h>
@@ -31,6 +32,10 @@ grub_addr_t grub_modbase;
 void
 grub_efi_init (void)
 {
+  grub_efi_loaded_image_t *image = NULL;
+  int len;
+  char *load_options;
+
   grub_modbase = grub_efi_modules_addr ();
   /* First of all, initialize the console so that GRUB can display
      messages.  */
@@ -43,9 +48,17 @@ grub_efi_init (void)
 	      0, 0, 0, NULL);
 
   grub_efidisk_init ();
+
+  /* Copy EFI load options into environment */
+  image = grub_efi_get_loaded_image (grub_efi_image_handle);
+  len = image->load_options_size / sizeof (grub_efi_char16_t);
+  load_options = grub_malloc (len * sizeof (char));
+  *grub_utf16_to_utf8 ((grub_uint8_t *) load_options, image->load_options, len) = '\0';
+  grub_env_set("efi_load_options", load_options);
+  grub_env_export("efi_load_options");
 }
 
-void (*grub_efi_net_config) (grub_efi_handle_t hnd, 
+void (*grub_efi_net_config) (grub_efi_handle_t hnd,
 			     char **device,
 			     char **path);
 
